@@ -11,6 +11,19 @@
   ],
   "routes": [
     {
+      "src": "/assets/(.*)",
+      "headers": {
+        "Cache-Control": "s-maxage=31536000, immutable",
+        "Content-Type": "text/javascript"
+      }
+    },
+    {
+      "src": "/(.*)\\.js",
+      "headers": {
+        "Content-Type": "text/javascript"
+      }
+    },
+    {
       "src": "/(.*)",
       "dest": "/index.html"
     }

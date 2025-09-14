@@ -4,6 +4,7 @@ import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import vueDevTools from "vite-plugin-vue-devtools";
 
+// Config
 export default defineConfig(({ command }) => ({
   plugins: [vue(), command === "serve" ? vueDevTools() : null].filter(Boolean),
   resolve: {

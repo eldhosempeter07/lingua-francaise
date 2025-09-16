@@ -50,6 +50,28 @@
                     </template>
                   </v-text-field>
                 </v-col>
+                <v-col cols="12" sm="6">
+                  <v-select
+                    v-model="newWord.category"
+                    :items="categories"
+                    item-title="name"
+                    item-value="id"
+                    label="Category"
+                    placeholder="Select a category"
+                    required
+                  ></v-select>
+                </v-col>
+                <v-col cols="12" sm="6">
+                  <v-select
+                    v-model="newWord.type"
+                    :items="types"
+                    item-title="name"
+                    item-value="id"
+                    label="Type"
+                    placeholder="Select a type"
+                    required
+                  ></v-select>
+                </v-col>
               </v-row>
               <v-btn
                 type="submit"
@@ -57,6 +79,8 @@
                 :disabled="
                   !newWord.french.trim() ||
                   !newWord.english.trim() ||
+                  !newWord.category ||
+                  !newWord.type ||
                   isTranslating
                 "
                 :loading="isTranslating"
@@ -81,6 +105,10 @@
                 <v-list-item-title>
                   <strong>{{ word.french }}</strong> - {{ word.english }}
                 </v-list-item-title>
+                <v-list-item-subtitle>
+                  Category: {{ getCategoryName(word.category) }} | Type:
+                  {{ getTypeName(word.type) }}
+                </v-list-item-subtitle>
                 <template v-slot:append>
                   <v-btn
                     class="mr-2"
@@ -100,6 +128,12 @@
                   </v-btn>
                 </template>
               </v-list-item>
+              <v-btn
+                color="primary"
+                to="/vocabulary-list"
+                v-if="userVocabulary.length"
+                >View All</v-btn
+              >
             </v-list>
             <p v-else>No words in your vocabulary yet. Add some above!</p>
           </v-card-text>
@@ -121,6 +155,8 @@ import {
   deleteDoc,
   getDocs,
   doc,
+  serverTimestamp,
+  limit,
 } from "firebase/firestore";
 import { db } from "@/firebase";
 import { useUserStore } from "@/stores/user";
@@ -129,8 +165,12 @@ import { useUserStore } from "@/stores/user";
 const newWord = ref({
   french: "",
   english: "",
+  category: null,
+  type: null,
 });
 const userVocabulary = ref([]);
+const categories = ref([]);
+const types = ref([]);
 const isTranslating = ref(false);
 const isAutoTranslated = ref(false);
 let unsubscribeVocabulary = null;
@@ -138,6 +178,44 @@ let debounceTimer = null;
 
 // Initialize user store
 const userStore = useUserStore();
+
+// Fetch categories and types from Firestore
+const fetchCategoriesAndTypes = async () => {
+  try {
+    // Fetch categories
+    // Fetch categories
+    const categoriesQuery = query(
+      collection(db, "categories"),
+      orderBy("name")
+    );
+
+    const categoriesSnapshot = await getDocs(categoriesQuery);
+    categories.value = categoriesSnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    // Fetch types
+    const typesSnapshot = await getDocs(collection(db, "types"));
+    types.value = typesSnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+  } catch (error) {
+    console.error("Error fetching categories and types:", error);
+  }
+};
+
+// Helper functions to get names from IDs
+const getCategoryName = (categoryId) => {
+  const category = categories.value.find((cat) => cat.id === categoryId);
+  return category ? category.name : "Unknown";
+};
+
+const getTypeName = (typeId) => {
+  const type = types.value.find((t) => t.id === typeId);
+  return type ? type.name : "Unknown";
+};
 
 // Translation function
 const translateWord = async () => {
@@ -252,11 +330,13 @@ const addNewWord = async () => {
       userId: userStore.user.uid,
       french: frenchWord,
       english: englishWord,
+      category: newWord.value.category,
+      type: newWord.value.type,
       createdAt: new Date(),
     });
 
     // Reset form
-    newWord.value = { french: "", english: "" };
+    newWord.value = { french: "", english: "", category: null, type: null };
     isAutoTranslated.value = false;
   } catch (error) {
     console.error("Error adding word:", error);
@@ -290,7 +370,8 @@ const fetchUserVocabulary = () => {
   const q = query(
     collection(db, "vocabulary"),
     where("userId", "==", userStore.user.uid),
-    orderBy("createdAt", "desc")
+    orderBy("createdAt", "desc"),
+    limit(10)
   );
 
   unsubscribeVocabulary = onSnapshot(q, (querySnapshot) => {
@@ -312,5 +393,6 @@ onUnmounted(() => {
 // Lifecycle hooks
 onMounted(() => {
   fetchUserVocabulary();
+  fetchCategoriesAndTypes();
 });
 </script>

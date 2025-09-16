@@ -7,6 +7,7 @@ import Translate from "../views/Translate.vue";
 import { useUserStore } from "@/stores/user";
 import Situations from "../views/Situations.vue";
 import NotFound from "../views/NotFound.vue";
+import VocabularyList from "../views/VocabularyList.vue";
 
 const routes = [
   {
@@ -43,6 +44,12 @@ const routes = [
     path: "/situations",
     name: "Situations",
     component: Situations,
+    meta: { requiresAuth: true }, // Protected route
+  },
+  {
+    path: "/vocabulary-list",
+    name: "VocabularyList",
+    component: VocabularyList,
     meta: { requiresAuth: true }, // Protected route
   },
   {
